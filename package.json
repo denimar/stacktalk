@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3000",
     "build": "next build",
     "generate": "prisma generate",
     "seed": "npx tsx --require dotenv/config prisma/seed.ts",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest --forceExit"
+    "test": "jest --forceExit",
+    "mastra:dev": "mastra dev"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1012.0",
@@ -18,6 +19,13 @@
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@types/bcryptjs": "^2.4.6",
+    "@mastra/core": "latest",
+    "@mastra/evals": "latest",
+    "@mastra/libsql": "latest",
+    "@mastra/loggers": "latest",
+    "@mastra/mcp": "^1.2.1",
+    "@mastra/memory": "latest",
+    "@mastra/observability": "latest",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -48,6 +56,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.7",
     "jest": "^30.3.0",
+    "mastra": "latest",
     "prisma": "^7.5.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.6",

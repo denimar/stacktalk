@@ -35,6 +35,6 @@ const agentModels: Record<AgentId, string> = {
 export function getAgentModel(agentId: AgentId) {
   return {
     ...openRouterBase,
-    id: agentModels[agentId] as typeof agentModels[AgentId],
+    id: agentModels[agentId] as `${string}/${string}`,
   };
 }

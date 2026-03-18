@@ -1,5 +1,6 @@
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+import type { TaskStatus } from "@/generated/prisma/client";
 
 const taskIdSchema = z.object({
   taskId: z.string(),
@@ -25,7 +26,7 @@ const retryResumeSchema = z.object({
 async function transitionTaskToNextAgent(
   taskId: string,
   nextRole: string,
-  nextStatus: string,
+  nextStatus: TaskStatus,
 ): Promise<void> {
   const prisma = (await import("@/db/prisma")).default;
   const nextAgent = await prisma.agent.findFirst({ where: { role: nextRole } });
