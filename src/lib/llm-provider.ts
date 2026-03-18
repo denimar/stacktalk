@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { RunnerCallbacks } from "./playwrightRunner";
 import { runPlaywrightAgent } from "./playwrightRunner";
-import { runOpenRouterAgent } from "./openRouterRunner";
+import { runMastraAgent, MastraAgentId } from "./mastraRunner";
 
 export type LlmProvider = "claude-subscription" | "open-router";
 
@@ -38,12 +38,13 @@ export async function setLlmProvider(provider: LlmProvider): Promise<void> {
 
 export async function runLlmAgent(
   prompt: string,
-  callbacks: RunnerCallbacks
+  callbacks: RunnerCallbacks,
+  mastraAgentId?: MastraAgentId
 ): Promise<{ response: string; codeBlocks: string[] }> {
   const provider = await getLlmProvider();
   console.log("[LLM Provider] Running agent with provider:", provider);
   if (provider === "open-router") {
-    return runOpenRouterAgent(prompt, callbacks);
+    return runMastraAgent(prompt, callbacks, mastraAgentId);
   }
   return runPlaywrightAgent(prompt, callbacks);
 }

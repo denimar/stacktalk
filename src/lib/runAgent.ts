@@ -4,6 +4,7 @@ import { runLlmAgent } from "./llm-provider";
 import { getProjectContext } from "./projectContext";
 import { parseFilesFromResponse, writeFilesToProject } from "./fileWriter";
 import { takeScreenshot, takeAfterScreenshot, captureWithThemes } from "./screenshotRunner";
+import { MastraAgentId } from "./mastraRunner";
 
 const OUTPUT_INSTRUCTIONS = `
 
@@ -36,9 +37,16 @@ RULES:
 - Output the COMPLETE file contents, not snippets
 - Do NOT skip any files — output ALL files that need to change`;
 
-const AGENT_ROLES = [
+interface AgentRole {
+  name: string;
+  mastraAgentId: MastraAgentId;
+  prefix: string;
+}
+
+const AGENT_ROLES: AgentRole[] = [
   {
-    name: "claude-subscription-implementer-agent",
+    name: "frontend-developer",
+    mastraAgentId: "frontend-developer",
     prefix: `IMPORTANT: Do NOT ask any clarifying questions. Do NOT ask for more details. You have the full project context below — use it. Produce your full output immediately.
 
 You are an expert full-stack software engineer. Your job is to deliver a complete, production-ready implementation for the feature described below.
@@ -57,6 +65,51 @@ Guidelines:
 - If the feature requires multiple files, output ALL of them.
 
 Feature to implement: `,
+  },
+  {
+    name: "backend-developer",
+    mastraAgentId: "backend-developer",
+    prefix: `IMPORTANT: Do NOT ask any clarifying questions. Produce your full output immediately.
+
+You are an expert backend engineer. Deliver a complete, production-ready implementation for the feature described below.
+
+Feature to implement: `,
+  },
+  {
+    name: "tech-lead",
+    mastraAgentId: "tech-lead",
+    prefix: `IMPORTANT: Do NOT ask any clarifying questions. Produce your full output immediately.
+
+You are a senior tech lead. Create a detailed technical specification and implementation plan for the feature described below.
+
+Feature to specify: `,
+  },
+  {
+    name: "product-designer",
+    mastraAgentId: "product-designer",
+    prefix: `IMPORTANT: Do NOT ask any clarifying questions. Produce your full output immediately.
+
+You are an expert product designer. Create a complete design specification with component layouts and styling for the feature described below.
+
+Feature to design: `,
+  },
+  {
+    name: "qa-engineer",
+    mastraAgentId: "qa-engineer",
+    prefix: `IMPORTANT: Do NOT ask any clarifying questions. Produce your full output immediately.
+
+You are an expert QA engineer. Write comprehensive tests for the feature described below.
+
+Feature to test: `,
+  },
+  {
+    name: "simple-request-resolver",
+    mastraAgentId: "simple-request-resolver",
+    prefix: `IMPORTANT: Do NOT ask any clarifying questions. Produce your full output immediately.
+
+You are an expert full-stack engineer handling a quick request. Implement it directly.
+
+Request: `,
   },
 ];
 
@@ -99,23 +152,27 @@ export async function executeAgent(
   appendAgentLog(taskId, agent.id, `Agent "${agent.name}" starting...`);
 
   try {
-    const { response, codeBlocks } = await runLlmAgent(prompt, {
-      onLog: (message) => {
-        appendAgentLog(taskId, agent.id, message);
+    const { response, codeBlocks } = await runLlmAgent(
+      prompt,
+      {
+        onLog: (message) => {
+          appendAgentLog(taskId, agent.id, message);
+        },
+        onComplete: (resp) => {
+          updateAgent(taskId, agent.id, {
+            output: resp,
+            codeBlocks: extractCodeBlocks(resp),
+          });
+        },
+        onError: (error) => {
+          updateAgent(taskId, agent.id, {
+            status: "error",
+            error,
+          });
+        },
       },
-      onComplete: (resp) => {
-        updateAgent(taskId, agent.id, {
-          output: resp,
-          codeBlocks: extractCodeBlocks(resp),
-        });
-      },
-      onError: (error) => {
-        updateAgent(taskId, agent.id, {
-          status: "error",
-          error,
-        });
-      },
-    });
+      role?.mastraAgentId
+    );
 
     // Update output and code blocks but keep status as "running"
     // until file writing and screenshots are done
