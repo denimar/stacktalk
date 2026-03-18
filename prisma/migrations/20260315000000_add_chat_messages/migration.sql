@@ -1,0 +1,2 @@
+-- This migration is intentionally empty.
+-- The ChatMessage model was created in migration 20260313100000_add_chat_messages.

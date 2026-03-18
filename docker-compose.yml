@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stacktalk_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: MLUzJxHWSK3YcbeP
+      POSTGRES_DB: stacktalk
+    ports:
+      - "5439:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data16
+
+volumes:
+  postgres_data:

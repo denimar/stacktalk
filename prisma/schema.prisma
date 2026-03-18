@@ -1,0 +1,379 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Agent {
+  id             String         @id @default(uuid())
+  name           String
+  avatar         String?
+  role           String         @unique
+  kanbanOrder    Int            @default(0) @map("kanban_order")
+  color          String         @default("#6366F1")
+  generateEndpoint String?      @map("generate_endpoint")
+  modelId        String         @map("model_id")
+  model          Model          @relation(fields: [modelId], references: [id])
+  tasks          Task[]         @relation("AssignedTasks")
+  conversations  Conversation[]
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@map("agents")
+}
+
+enum TaskType {
+  bug
+  feature
+  task
+}
+
+enum TaskStatus {
+  todo
+  waiting_approval
+  in_progress
+  qa
+  done
+}
+
+enum AssignmentMode {
+  pipeline
+  simple_request
+}
+
+model Task {
+  id             String         @id @default(uuid())
+  title          String
+  description    String         @default("")
+  type           TaskType
+  status         TaskStatus     @default(todo)
+  assignmentMode AssignmentMode @default(pipeline) @map("assignment_mode")
+  assigneeId     String         @map("assignee_id")
+  assignee       Agent          @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  projectId      String         @map("project_id")
+  project        Project        @relation("ProjectTasks", fields: [projectId], references: [id])
+  createdById    String?        @map("created_by_id")
+  createdBy      User?          @relation("UserCreatedTasks", fields: [createdById], references: [id])
+  parentTaskId   String?        @map("parent_task_id")
+  parentTask     Task?          @relation("ParentChild", fields: [parentTaskId], references: [id])
+  childTasks     Task[]         @relation("ParentChild")
+  pullRequestUrl String?        @map("pull_request_url")
+  workflowRunId  String?        @map("workflow_run_id")
+  comments       Comment[]      @relation("TaskComments")
+  images         TaskImage[]    @relation("TaskImages")
+  taskMessages   TaskMessage[]  @relation("TaskMessages")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@map("tasks")
+}
+
+enum AuthorType {
+  user
+  agent
+}
+
+model Comment {
+  id         String         @id @default(uuid())
+  body       String
+  attachment String?
+  authorType AuthorType     @map("author_type")
+  authorId   String         @map("author_id")
+  taskId     String         @map("task_id")
+  task       Task           @relation("TaskComments", fields: [taskId], references: [id], onDelete: Cascade)
+  images     CommentImage[]
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@index([taskId, createdAt])
+  @@map("comments")
+}
+
+model CommentImage {
+  id        String   @id @default(uuid())
+  fileName  String   @map("file_name")
+  s3Key     String   @map("s3_key")
+  mimeType  String   @map("mime_type")
+  fileSize  Int      @map("file_size")
+  commentId String   @map("comment_id")
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("comment_images")
+}
+
+model TaskImage {
+  id        String   @id @default(uuid())
+  fileName  String   @map("file_name")
+  s3Key     String   @map("s3_key")
+  mimeType  String   @map("mime_type")
+  fileSize  Int      @map("file_size")
+  taskId    String   @map("task_id")
+  task      Task     @relation("TaskImages", fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("task_images")
+}
+
+model User {
+  id               String         @id @default(uuid())
+  name             String
+  email            String         @unique
+  avatar           String?
+  role             String         @default("owner")
+  status           String         @default("active")
+  password         String?
+  loginAttempts    Int            @default(0) @map("login_attempts")
+  lockedUntil      DateTime?      @map("locked_until")
+  invitationToken  String?        @map("invitation_token")
+  invitationExpiry DateTime?      @map("invitation_expiry")
+  resetToken       String?        @map("reset_token")
+  resetTokenExpiry DateTime?      @map("reset_token_expiry")
+  lastActivityAt   DateTime?      @map("last_activity_at")
+  conversations    Conversation[]
+  chatMessages     ChatMessage[]
+  userGroups       UserGroup[]
+  userProjects     UserProject[]
+  createdTasks     Task[]         @relation("UserCreatedTasks")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Model {
+  id                  String   @id @default(uuid())
+  slug                String   @unique
+  name                String
+  shortName           String   @map("short_name")
+  author              String
+  description         String   @default("")
+  contextLength       Int      @map("context_length")
+  maxPromptTokens     Int?     @map("max_prompt_tokens")
+  maxCompletionTokens Int?     @map("max_completion_tokens")
+  inputModalities     String[] @map("input_modalities")
+  outputModalities    String[] @map("output_modalities")
+  group               String   @default("")
+  supportsReasoning   Boolean  @default(false) @map("supports_reasoning")
+  promptPrice            String   @default("0") @map("prompt_price")
+  completionPrice        String   @default("0") @map("completion_price")
+  imagePrice             String   @default("0") @map("image_price")
+  requestPrice           String   @default("0") @map("request_price")
+  inputCacheReadPrice    String   @default("0") @map("input_cache_read_price")
+  inputCacheWritePrice   String   @default("0") @map("input_cache_write_price")
+  webSearchPrice         String   @default("0") @map("web_search_price")
+  internalReasoningPrice String   @default("0") @map("internal_reasoning_price")
+  isFree                 Boolean  @default(false) @map("is_free")
+  permaslug           String   @default("")
+  agents              Agent[]
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("models")
+}
+
+model Project {
+  id            String    @id @default(uuid())
+  name          String
+  gitRepository String    @default("") @map("git_repository")
+  description   String    @default("")
+  devUrl        String    @default("") @map("dev_url")
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  tasks         Task[]        @relation("ProjectTasks")
+  chatMessages  ChatMessage[] @relation("ProjectChatMessages")
+  taskMessages  TaskMessage[] @relation("ProjectTaskMessages")
+  userProjects  UserProject[]
+
+  @@map("projects")
+}
+
+model Conversation {
+  id        String                @id @default(uuid())
+  ownerId   String                @map("owner_id")
+  agentId   String                @map("agent_id")
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
+
+  owner    User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  agent    Agent                  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@unique([ownerId, agentId])
+  @@index([ownerId])
+  @@index([agentId])
+  @@index([updatedAt])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String                  @id @default(uuid())
+  conversationId String                  @map("conversation_id")
+  role           String
+  senderName     String                  @map("sender_name")
+  content        String                  @db.Text
+  status         String                  @default("sent")
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments    ConversationAttachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId])
+  @@map("conversation_messages")
+}
+
+model ConversationAttachment {
+  id             String               @id @default(uuid())
+  messageId      String?              @map("message_id")
+  fileName       String               @map("file_name")
+  fileType       String               @map("file_type")
+  fileSize       Int                  @map("file_size")
+  storagePath    String               @map("storage_path")
+  attachmentType String               @map("attachment_type")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  message        ConversationMessage? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("conversation_attachments")
+}
+
+enum Role {
+  OWNER
+  PM_AGENT
+}
+
+enum Permission {
+  admin
+  viewer
+  can_approve_prd
+  can_approve_tech_spec
+  can_approve_design
+  can_create_tasks
+  can_comment
+}
+
+model Group {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String       @default("")
+  permissions Permission[]
+  users       UserGroup[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@map("groups")
+}
+
+model UserGroup {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  groupId   String   @map("group_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, groupId])
+  @@map("user_groups")
+}
+
+model UserProject {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  projectId String   @map("project_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, projectId])
+  @@map("user_projects")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  role      Role
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  projectId String?  @map("project_id")
+  project   Project? @relation("ProjectChatMessages", fields: [projectId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([projectId, createdAt])
+  @@map("chat_messages")
+}
+
+model TaskMessage {
+  id              String              @id @default(uuid())
+  content         String              @db.Text
+  authorType      AuthorType          @map("author_type")
+  authorId        String              @map("author_id")
+  projectId       String              @map("project_id")
+  project         Project             @relation("ProjectTaskMessages", fields: [projectId], references: [id])
+  taskId          String?             @map("task_id")
+  task            Task?               @relation("TaskMessages", fields: [taskId], references: [id])
+  parentMessageId String?             @map("parent_message_id")
+  parentMessage   TaskMessage?        @relation("ThreadReplies", fields: [parentMessageId], references: [id])
+  replies         TaskMessage[]       @relation("ThreadReplies")
+  replyCount      Int                 @default(0) @map("reply_count")
+  isEdited        Boolean             @default(false) @map("is_edited")
+  editedAt        DateTime?           @map("edited_at")
+  attachments     MessageAttachment[]
+  mentions        MessageMention[]
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  @@index([projectId, createdAt])
+  @@index([parentMessageId, createdAt])
+  @@index([taskId, createdAt])
+  @@map("task_messages")
+}
+
+model MessageAttachment {
+  id             String      @id @default(uuid())
+  messageId      String      @map("message_id")
+  message        TaskMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileName       String      @map("file_name")
+  fileType       String      @map("file_type")
+  fileSize       Int         @map("file_size")
+  s3Key          String      @map("s3_key")
+  attachmentType String      @map("attachment_type")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+model MessageMention {
+  id          String      @id @default(uuid())
+  messageId   String      @map("message_id")
+  message     TaskMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  targetType  AuthorType  @map("target_type")
+  targetId    String      @map("target_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([targetId, targetType])
+  @@index([messageId])
+  @@map("message_mentions")
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
