@@ -1,6 +1,7 @@
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
-import type { TaskStatus } from "@/generated/prisma/client";
+
+type TaskStatus = "todo" | "waiting_approval" | "in_progress" | "qa" | "done";
 
 const taskIdSchema = z.object({
   taskId: z.string(),
@@ -23,12 +24,17 @@ const retryResumeSchema = z.object({
   retry: z.boolean().optional(),
 });
 
+async function loadPrisma() {
+  const modulePath = "@/db/prisma";
+  return (await import(/* @vite-ignore */ modulePath)).default;
+}
+
 async function transitionTaskToNextAgent(
   taskId: string,
   nextRole: string,
   nextStatus: TaskStatus,
 ): Promise<void> {
-  const prisma = (await import("@/db/prisma")).default;
+  const prisma = await loadPrisma();
   const nextAgent = await prisma.agent.findFirst({ where: { role: nextRole } });
   if (!nextAgent) {
     throw new Error(`${nextRole} agent not found`);
