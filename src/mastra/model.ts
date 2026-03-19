@@ -19,7 +19,7 @@ const openRouterBase = {
   },
 };
 
-const agentModels: Record<AgentId, string> = {
+const agentModels: Record<AgentId, `${string}/${string}`> = {
   'product-manager': 'openrouter/auto',
   'project-manager': 'openrouter/auto',
   'tech-lead': 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
@@ -35,6 +35,6 @@ const agentModels: Record<AgentId, string> = {
 export function getAgentModel(agentId: AgentId) {
   return {
     ...openRouterBase,
-    id: agentModels[agentId] as `${string}/${string}`,
+    id: agentModels[agentId],
   };
 }
