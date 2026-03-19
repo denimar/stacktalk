@@ -122,13 +122,13 @@ export function AgentPanel({ agent }: AgentPanelProps) {
               className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
             >
               <ExternalLink className="size-4 shrink-0" />
-              <span className="truncate">{agent.previewUrl}</span>
+              <span className="truncate">Open Live Preview</span>
             </a>
             <iframe
               src={agent.previewUrl}
               title="Live Preview"
               className="mt-2 w-full h-64 rounded-md border border-border"
-              sandbox="allow-scripts allow-same-origin"
+              sandbox="allow-scripts allow-same-origin allow-forms"
             />
           </div>
         )}

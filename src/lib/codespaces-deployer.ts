@@ -305,9 +305,10 @@ export async function deployToPreview(
   onLog("Waiting for HMR to pick up changes...");
   await new Promise((resolve) => setTimeout(resolve, 3000));
   const finalState = state.activeCodespaces.get(projectKey);
-  const previewUrl = finalState?.previewUrl || "";
-  onLog(`Preview ready: ${previewUrl}`);
-  return previewUrl;
+  const rawUrl = finalState?.previewUrl || "";
+  const proxyUrl = `/api/preview-proxy?url=${encodeURIComponent(rawUrl)}`;
+  onLog(`Preview ready: ${rawUrl} (proxied)`);
+  return proxyUrl;
 }
 
 export function isCodespacesEnabled(): boolean {
