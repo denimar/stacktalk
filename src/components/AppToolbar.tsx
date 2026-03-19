@@ -6,7 +6,7 @@ import { ToolbarProjectSelector } from "@/components/ToolbarProjectSelector";
 
 export function AppToolbar() {
   return (
-    <header className="relative flex items-center border-b border-[var(--border-subtle)] px-4 py-3.5 xl:px-6">
+    <header className="relative flex items-center border-b border-[var(--border-subtle)] px-4 py-3.5 xl:px-6 bg-yellow-400">
       <Link
         href="/"
         className="group flex shrink-0 items-center gap-3.5 transition-opacity duration-200 hover:opacity-80"
