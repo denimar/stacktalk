@@ -228,13 +228,21 @@ export async function prepareProjectRepo(gitRepository: string): Promise<Prepare
     await cloneRepo(gitRepository, repoDir);
     await installDependencies(repoDir);
     await generatePrismaClient(repoDir);
-    await buildProject(repoDir);
-    const port = await findFreePort();
-    const devProcess = await startDevServer(repoDir, port);
-    const devUrl = `http://localhost:${port}`;
-    const result: PreparedRepo = { dir: repoDir, devUrl, devProcess };
+    let devUrl: string | undefined;
+    let devProcess: ChildProcess | undefined;
+    try {
+      await buildProject(repoDir);
+      const port = await findFreePort();
+      devProcess = await startDevServer(repoDir, port);
+      devUrl = `http://localhost:${port}`;
+    } catch (buildError) {
+      console.error("[GitRepoManager] Build/dev server failed, repo still usable for git operations", {
+        error: buildError instanceof Error ? buildError.message : String(buildError),
+      });
+    }
+    const result: PreparedRepo = { dir: repoDir, devUrl: devUrl || "", devProcess: devProcess as ChildProcess };
     clonedProjects.set(gitRepository, result);
-    console.log(`[GitRepoManager] Repo ready at: ${repoDir}, devUrl: ${devUrl}`);
+    console.log(`[GitRepoManager] Repo ready at: ${repoDir}, devUrl: ${devUrl || "(none)"}`);
     return result;
   } catch (error) {
     console.error("[GitRepoManager] prepareProjectRepo failed", {

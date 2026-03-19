@@ -32,7 +32,12 @@ const agentModels: Record<AgentId, string> = {
   'simple-request-resolver': 'openrouter/auto',
 };
 
-export function getAgentModel(agentId: AgentId) {
+export function getAgentModel(agentId: AgentId): {
+  id: `${string}/${string}`;
+  url: string;
+  apiKey: string | undefined;
+  headers: Record<string, string>;
+} {
   return {
     ...openRouterBase,
     id: agentModels[agentId] as `${string}/${string}`,
