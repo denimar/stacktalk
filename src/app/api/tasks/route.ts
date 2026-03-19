@@ -4,7 +4,7 @@ import { createAgents, runAllAgents } from "@/lib/runAgent";
 import prisma from "@/lib/prisma";
 import { prepareProjectRepo } from "@/lib/git-repo-manager";
 import { PROJECTS } from "@/lib/types";
-import { isRunloopEnabled } from "@/lib/runloop-deployer";
+import { isCodespacesEnabled } from "@/lib/codespaces-deployer";
 
 export async function GET(request: NextRequest) {
   const projectId = request.nextUrl.searchParams.get("projectId");
@@ -61,14 +61,14 @@ export async function POST(request: NextRequest) {
       });
     }
   }
-  const useRunloop = isRunloopEnabled() && !!dbProject.gitRepository;
+  const useCodespaces = isCodespacesEnabled() && !!dbProject.gitRepository;
   const project = {
     id: dbProject.id,
     name: dbProject.name,
     dir,
     gitRepository: dbProject.gitRepository || undefined,
     devUrl,
-    useRunloop,
+    useCodespaces,
   };
 
   const task = createTask(description, projectId);

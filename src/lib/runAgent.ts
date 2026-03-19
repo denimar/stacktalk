@@ -4,7 +4,7 @@ import { runLlmAgent } from "./llm-provider";
 import { getProjectContext } from "./projectContext";
 import { parseFilesFromResponse, writeFilesToProject } from "./fileWriter";
 import { takeScreenshot, takeAfterScreenshot, captureWithThemes } from "./screenshotRunner";
-import { deployToPreview } from "./runloop-deployer";
+import { deployToPreview } from "./codespaces-deployer";
 import { MastraAgentId } from "./mastraRunner";
 
 const OUTPUT_INSTRUCTIONS = `
@@ -198,7 +198,7 @@ export async function executeAgent(
 
       // Take BEFORE screenshot (before writing files) — only for local projects
       let beforeFile: string | null = null;
-      if (!project.useRunloop && project.devUrl) {
+      if (!project.useCodespaces && project.devUrl) {
         appendAgentLog(taskId, agent.id, "Taking BEFORE screenshot...");
         const beforeName = `${taskId}-${agent.id}-before.png`;
         beforeFile = await takeScreenshot(project.devUrl, beforeName);
@@ -225,8 +225,8 @@ export async function executeAgent(
 
       let previewUrl: string | null = null;
 
-      if (project.useRunloop && result.written.length > 0) {
-        // Deploy to Runloop devbox and get preview URL
+      if (project.useCodespaces && result.written.length > 0) {
+        // Deploy to GitHub Codespace and get preview URL
         try {
           previewUrl = await deployToPreview(
             project,
@@ -236,9 +236,9 @@ export async function executeAgent(
           appendAgentLog(taskId, agent.id, `Preview deployed: ${previewUrl}`);
         } catch (deployError) {
           const deployMsg = deployError instanceof Error ? deployError.message : String(deployError);
-          appendAgentLog(taskId, agent.id, `Runloop deploy failed: ${deployMsg}`);
+          appendAgentLog(taskId, agent.id, `Codespaces deploy failed: ${deployMsg}`);
         }
-      } else if (!project.useRunloop && project.devUrl && result.written.length > 0 && beforeFile) {
+      } else if (!project.useCodespaces && project.devUrl && result.written.length > 0 && beforeFile) {
         // Take AFTER screenshot with retry until page changes (local workflow)
         appendAgentLog(taskId, agent.id, "Waiting for dev server recompilation...");
         await new Promise((resolve) => setTimeout(resolve, 5000));

@@ -4,7 +4,7 @@ export interface Project {
   dir: string;
   gitRepository?: string;
   devUrl?: string;
-  useRunloop?: boolean;
+  useCodespaces?: boolean;
 }
 
 export const PROJECTS: Project[] = [

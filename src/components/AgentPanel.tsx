@@ -88,7 +88,7 @@ export function AgentPanel({ agent }: AgentPanelProps) {
           </div>
         )}
 
-        {/* Live Preview (Runloop) */}
+        {/* Live Preview (Codespaces) */}
         {agent.previewUrl && (
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
