@@ -341,7 +341,7 @@ export default function LoginPage() {
                     <label htmlFor="login-email" className="mb-2 block text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--login-text-muted)" }}>
                       Email
                     </label>
-                    <div className="relative">
+                    <div className="relative" suppressHydrationWarning>
                       <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--login-text-muted)" }}>
                         <EmailIcon />
                       </div>
@@ -369,7 +369,7 @@ export default function LoginPage() {
                     <label htmlFor="login-password" className="mb-2 block text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--login-text-muted)" }}>
                       Password
                     </label>
-                    <div className="relative">
+                    <div className="relative" suppressHydrationWarning>
                       <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--login-text-muted)" }}>
                         <LockIcon />
                       </div>
