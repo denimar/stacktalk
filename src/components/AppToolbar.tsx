@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { UserMenu } from "@/components/UserMenu";
 import { ToolbarProjectSelector } from "@/components/ToolbarProjectSelector";
+import { Button } from "@/components/ui/button";
 
 export function AppToolbar() {
   return (
@@ -52,6 +53,9 @@ export function AppToolbar() {
       </div>
 
       <div className="ml-2 sm:ml-6 flex shrink-0 items-center gap-2 xl:ml-10 xl:gap-3">
+        <Button className="bg-green-600 hover:bg-green-500 text-white">
+          Action
+        </Button>
         <UserMenu />
       </div>
     </header>
