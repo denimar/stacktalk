@@ -209,15 +209,35 @@ export async function runFeedAgent(params: FeedAgentRunParams): Promise<void> {
           dbTaskId,
           agentAuthor
         );
-        await captureFeedScreenshots({
-          dbTaskId,
-          agentId: agent.id,
-          projectId,
-          agentDbId,
-          agentAuthor,
-          devUrl: project.devUrl,
-          filesWritten,
-        });
+        if (agent.previewUrl) {
+          await createTaskMessage(
+            `Here's how it looks:\n\n[Live preview](${agent.previewUrl})`,
+            "agent",
+            agentDbId,
+            projectId,
+            dbTaskId,
+            agentAuthor
+          );
+        } else if (agent.branchUrl) {
+          await createTaskMessage(
+            `Changes pushed to branch:\n\n[View on GitHub](${agent.branchUrl})`,
+            "agent",
+            agentDbId,
+            projectId,
+            dbTaskId,
+            agentAuthor
+          );
+        } else if (!project.useCodespaces && !project.gitRepository) {
+          await captureFeedScreenshots({
+            dbTaskId,
+            agentId: agent.id,
+            projectId,
+            agentDbId,
+            agentAuthor,
+            devUrl: project.devUrl,
+            filesWritten,
+          });
+        }
         await prisma.task.update({
           where: { id: dbTaskId },
           data: { status: "done" },
