@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
@@ -36,9 +37,10 @@ interface FormData {
   name: string;
   description: string;
   gitRepository: string;
+  setupInstructions: string;
 }
 
-const EMPTY_FORM: FormData = { name: "", description: "", gitRepository: "" };
+const EMPTY_FORM: FormData = { name: "", description: "", gitRepository: "", setupInstructions: "" };
 
 export function ProjectManagementModal({
   open,
@@ -84,6 +86,7 @@ export function ProjectManagementModal({
       name: project.name,
       description: project.description,
       gitRepository: project.gitRepository,
+      setupInstructions: project.setupInstructions,
     });
     setView("form");
   }
@@ -344,6 +347,21 @@ export function ProjectManagementModal({
                   }
                   placeholder="https://github.com/org/repo"
                   className="h-10 bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus-visible:border-[var(--accent-primary)]/50 focus-visible:ring-[var(--accent-primary)]/20 transition-all duration-200"
+                />
+              </FormField>
+
+              <FormField label="Setup instructions">
+                <Textarea
+                  value={form.setupInstructions}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      setupInstructions: e.target.value,
+                    }))
+                  }
+                  placeholder={"# INSTALL\n- pnpm install\n\n# START\n- pnpm dev"}
+                  rows={5}
+                  className="bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus-visible:border-[var(--accent-primary)]/50 focus-visible:ring-[var(--accent-primary)]/20 transition-all duration-200 font-mono text-xs resize-y"
                 />
               </FormField>
             </div>

@@ -4,6 +4,7 @@ import { Agent } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CodeViewer } from "./CodeViewer";
+import Image from "next/image";
 import { Bot, CheckCircle, XCircle, Loader2, Camera, ExternalLink } from "lucide-react";
 
 interface AgentPanelProps {
@@ -123,20 +124,24 @@ export function AgentPanel({ agent }: AgentPanelProps) {
               <div>
                 <p className="text-xs text-muted-foreground mb-1 text-center font-medium">Before</p>
                 <div className="rounded-md overflow-hidden border border-border">
-                  <img
+                  <Image
                     src={`/api/screenshots/${agent.screenshots.before}`}
                     alt="Before change"
                     className="w-full h-auto"
+                    width={640}
+                    height={400}
                   />
                 </div>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1 text-center font-medium">After</p>
                 <div className="rounded-md overflow-hidden border border-green-500/50">
-                  <img
+                  <Image
                     src={`/api/screenshots/${agent.screenshots.after}`}
                     alt="After change"
                     className="w-full h-auto"
+                    width={640}
+                    height={400}
                   />
                 </div>
               </div>
@@ -150,20 +155,24 @@ export function AgentPanel({ agent }: AgentPanelProps) {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1 text-center font-medium">Dark</p>
                     <div className="rounded-md overflow-hidden border border-border">
-                      <img
+                      <Image
                         src={`/api/screenshots/${agent.screenshots.darkAfter}`}
                         alt="Dark theme"
                         className="w-full h-auto"
+                        width={640}
+                        height={400}
                       />
                     </div>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1 text-center font-medium">Light</p>
                     <div className="rounded-md overflow-hidden border border-border">
-                      <img
+                      <Image
                         src={`/api/screenshots/${agent.screenshots.lightAfter}`}
                         alt="Light theme"
                         className="w-full h-auto"
+                        width={640}
+                        height={400}
                       />
                     </div>
                   </div>

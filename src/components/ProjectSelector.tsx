@@ -17,8 +17,6 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ value, onChange, disabled }: ProjectSelectorProps) {
-  const selected = PROJECTS.find((p) => p.id === value);
-
   return (
     <div className="flex items-center gap-2">
       <FolderOpen className="size-4 text-muted-foreground shrink-0" />

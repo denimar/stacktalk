@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Loader2, AlertCircle, ZoomIn, ZoomOut, RotateCw, Maximize } from "lucide-react";
 
@@ -127,13 +128,16 @@ export function ImageViewer({ url, alt }: ImageViewerProps) {
             <Loader2 className="size-6 animate-spin text-[var(--accent-primary)]" />
           </div>
         )}
-        <img
+        <Image
           src={url}
           alt={alt}
           draggable={false}
+          width={800}
+          height={600}
+          unoptimized
           onLoad={(e) => {
             setIsLoading(false);
-            const img = e.currentTarget;
+            const img = e.currentTarget as HTMLImageElement;
             setImageDimensions({ w: img.naturalWidth, h: img.naturalHeight });
           }}
           onError={() => {

@@ -3,14 +3,8 @@
 import Link from "next/link";
 import { UserMenu } from "@/components/UserMenu";
 import { ToolbarProjectSelector } from "@/components/ToolbarProjectSelector";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 
-interface AppToolbarProps {
-  hideNavigation?: boolean;
-}
-
-export function AppToolbar({ hideNavigation }: AppToolbarProps) {
+export function AppToolbar() {
   return (
     <header className="relative flex items-center border-b border-[var(--border-subtle)] px-4 py-3.5 xl:px-6">
       <Link

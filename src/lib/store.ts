@@ -1,4 +1,4 @@
-import { Task, Agent, AgentLog } from "./types";
+import { Task, Agent } from "./types";
 
 // Persist across HMR restarts using globalThis (standard Next.js pattern)
 const globalForStore = globalThis as unknown as {

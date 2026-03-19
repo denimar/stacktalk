@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore agent worktree repos, session data, and user uploads
+    ".agent-repos/**",
+    ".claude-session/**",
+    "public/uploads/**",
   ]),
 ]);
 

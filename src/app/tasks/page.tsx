@@ -5,7 +5,6 @@ import {
   useCallback,
   useMemo,
   useEffect,
-  useRef,
   Suspense,
 } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -39,7 +38,7 @@ const TYPE_ICON = {
 };
 
 function FeedContent() {
-  const { selectedProjectId, selectedProject } = useProjectContext();
+  const { selectedProjectId } = useProjectContext();
   const { user } = useCurrentUser();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -49,17 +48,12 @@ function FeedContent() {
   );
   const [tasks, setTasks] = useState<TaskSidebarItem[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarInitialized, setSidebarInitialized] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== "undefined") return window.innerWidth >= 1024;
+    return true;
+  });
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const prevProjectId = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!sidebarInitialized) {
-      setSidebarOpen(window.innerWidth >= 1024);
-      setSidebarInitialized(true);
-    }
-  }, [sidebarInitialized]);
+  const [prevProjectId, setPrevProjectId] = useState<string | null>(null);
 
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -75,30 +69,37 @@ function FeedContent() {
       .catch((error) => console.error("Failed to refresh tasks", { error }));
   }, [projectId]);
 
+  if (projectId && prevProjectId !== projectId) {
+    const isInitialLoad = prevProjectId === null;
+    setPrevProjectId(projectId);
+    if (isInitialLoad && taskParam) {
+      setSelectedTaskId(taskParam);
+    } else if (!isInitialLoad) {
+      setSelectedTaskId("general");
+      setSelectedThreadId(null);
+      setEditingMessageId(null);
+    }
+  }
+
+  const fetchTasks = useCallback(async (pid: string) => {
+    setTasksLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${pid}/tasks`);
+      if (res.ok) {
+        const json = await res.json();
+        setTasks(json.data ?? []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch tasks", { error });
+    } finally {
+      setTasksLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!projectId) return;
-    if (prevProjectId.current !== projectId) {
-      const isInitialLoad = prevProjectId.current === null;
-      prevProjectId.current = projectId;
-      if (isInitialLoad && taskParam) {
-        setSelectedTaskId(taskParam);
-      } else if (!isInitialLoad) {
-        setSelectedTaskId("general");
-        setSelectedThreadId(null);
-        setEditingMessageId(null);
-        const params = new URLSearchParams(window.location.search);
-        params.delete("task");
-        const qs = params.toString();
-        router.replace(`/tasks${qs ? `?${qs}` : ""}`, { scroll: false });
-      }
-    }
-    setTasksLoading(true);
-    fetch(`/api/projects/${projectId}/tasks`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((json) => setTasks(json.data ?? []))
-      .catch((error) => console.error("Failed to fetch tasks", { error }))
-      .finally(() => setTasksLoading(false));
-  }, [projectId]);
+    void fetchTasks(projectId);
+  }, [projectId, fetchTasks]);
   const {
     messages,
     threadMessages,

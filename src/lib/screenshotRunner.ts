@@ -1,4 +1,4 @@
-import { chromium, Browser, Page, BrowserContext } from "playwright";
+import { chromium, Browser, Page } from "playwright";
 import path from "path";
 import fs from "fs";
 import { PNG } from "pngjs";

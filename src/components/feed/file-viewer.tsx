@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { X, Download, ZoomIn, ZoomOut, RotateCw, Maximize2, Minimize2 } from "lucide-react";
+import { X, Download, Maximize2, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarkdownViewer } from "@/components/feed/viewers/markdown-viewer";
 import { PdfViewer } from "@/components/feed/viewers/pdf-viewer";

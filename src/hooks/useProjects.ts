@@ -7,6 +7,7 @@ export interface ProjectItem {
   name: string;
   description: string;
   gitRepository: string;
+  setupInstructions: string;
 }
 
 const STORAGE_KEY = "stacktalk_selected_project";
@@ -48,7 +49,7 @@ export function useProjects() {
   }, []);
 
   const addProject = useCallback(
-    async (data: { name: string; description: string; gitRepository: string }) => {
+    async (data: { name: string; description: string; gitRepository: string; setupInstructions: string }) => {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,7 +69,7 @@ export function useProjects() {
   );
 
   const updateProject = useCallback(
-    async (id: string, data: { name: string; description: string; gitRepository: string }) => {
+    async (id: string, data: { name: string; description: string; gitRepository: string; setupInstructions: string }) => {
       const res = await fetch(`/api/projects/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -15,23 +16,24 @@ export function MarkdownViewer({ url }: MarkdownViewerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const loadContent = useCallback(async (targetUrl: string) => {
     setIsLoading(true);
     setError(null);
-    fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
-        return res.text();
-      })
-      .then((text) => {
-        setContent(text);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load markdown");
-        setIsLoading(false);
-      });
-  }, [url]);
+    try {
+      const res = await fetch(targetUrl);
+      if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
+      const text = await res.text();
+      setContent(text);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load markdown");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContent(url);
+  }, [url, loadContent]);
 
   if (isLoading) {
     return (
@@ -159,18 +161,21 @@ export function MarkdownViewer({ url }: MarkdownViewerProps) {
               </td>
             ),
             img: ({ src, alt }) => (
-              <img
-                src={src}
+              <Image
+                src={src ?? ""}
                 alt={alt ?? ""}
                 className="my-4 max-w-full rounded-lg border border-[var(--border-subtle)]"
                 loading="lazy"
+                width={800}
+                height={600}
+                unoptimized
               />
             ),
             strong: ({ children }) => (
               <strong className="font-semibold text-[var(--text-primary)]">{children}</strong>
             ),
             em: ({ children }) => <em className="italic">{children}</em>,
-            input: ({ checked, ...rest }) => (
+            input: ({ checked }) => (
               <input
                 type="checkbox"
                 checked={checked}

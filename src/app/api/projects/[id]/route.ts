@@ -11,10 +11,11 @@ export async function PUT(
     if (isAuthError(authResult)) return authResult;
     const { id } = await params;
     const body = await request.json();
-    const { name, description, gitRepository } = body as {
+    const { name, description, gitRepository, setupInstructions } = body as {
       name?: string;
       description?: string;
       gitRepository?: string;
+      setupInstructions?: string;
     };
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
@@ -35,8 +36,9 @@ export async function PUT(
         name: name.trim(),
         description: typeof description === "string" ? description.trim() : project.description,
         gitRepository: typeof gitRepository === "string" ? gitRepository.trim() : project.gitRepository,
+        setupInstructions: typeof setupInstructions === "string" ? setupInstructions.trim() : project.setupInstructions,
       },
-      select: { id: true, name: true, description: true, gitRepository: true },
+      select: { id: true, name: true, description: true, gitRepository: true, setupInstructions: true },
     });
     return NextResponse.json({ data: updated });
   } catch (error) {

@@ -101,7 +101,7 @@ async function buildFileTree(
 ): Promise<string> {
   if (depth > MAX_TREE_DEPTH) return "";
 
-  let entries: string[] = [];
+  const entries: string[] = [];
   let count = 0;
 
   try {

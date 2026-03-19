@@ -24,6 +24,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -100,7 +101,9 @@ export function MarkdownEditor({
   }, []);
 
   const onAttachmentsChangeRef = useRef(onAttachmentsChange);
-  onAttachmentsChangeRef.current = onAttachmentsChange;
+  useEffect(() => {
+    onAttachmentsChangeRef.current = onAttachmentsChange;
+  }, [onAttachmentsChange]);
 
   const updateAttachments = useCallback(
     (updater: (prev: Attachment[]) => Attachment[]) => {
@@ -431,10 +434,13 @@ export function MarkdownEditor({
                       className="size-full cursor-pointer disabled:cursor-default"
                       title="Click to preview"
                     >
-                      <img
+                      <Image
                         src={attachment.previewUrl}
                         alt="attachment preview"
                         className="size-full object-cover"
+                        width={72}
+                        height={72}
+                        unoptimized
                       />
                     </button>
                     {attachment.uploading && (

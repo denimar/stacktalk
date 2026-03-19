@@ -76,7 +76,7 @@ export function MessageFeed({
         agentLastIndex.set(msg.authorId, i);
       }
     }
-    for (const [authorId, lastIdx] of agentLastIndex) {
+    for (const [, lastIdx] of agentLastIndex) {
       const msg = messages[lastIdx];
       if (msg.content === WORKING_MESSAGE) {
         ids.add(msg.id);

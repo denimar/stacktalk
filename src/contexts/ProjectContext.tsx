@@ -9,8 +9,8 @@ interface ProjectContextType {
   selectedProjectId: string | null;
   loading: boolean;
   selectProject: (id: string) => void;
-  addProject: (data: { name: string; description: string; gitRepository: string }) => Promise<ProjectItem>;
-  updateProject: (id: string, data: { name: string; description: string; gitRepository: string }) => Promise<ProjectItem>;
+  addProject: (data: { name: string; description: string; gitRepository: string; setupInstructions: string }) => Promise<ProjectItem>;
+  updateProject: (id: string, data: { name: string; description: string; gitRepository: string; setupInstructions: string }) => Promise<ProjectItem>;
   deleteProject: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }

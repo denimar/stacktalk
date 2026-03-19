@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Hash,
   Search,
@@ -72,8 +72,8 @@ export function TaskSidebar({
     () => new Set(STATUS_ORDER)
   );
   const [sectionsInitialized, setSectionsInitialized] = useState(false);
-  useEffect(() => {
-    if (sectionsInitialized || tasks.length === 0) return;
+  if (!sectionsInitialized && tasks.length > 0) {
+    setSectionsInitialized(true);
     const selectedItem = selectedTaskId && selectedTaskId !== "general"
       ? tasks.find((t) => t.id === selectedTaskId)
       : null;
@@ -81,8 +81,7 @@ export function TaskSidebar({
       ? selectedItem.status
       : STATUS_ORDER.find((s) => tasks.some((t) => t.status === s));
     setCollapsedSections(new Set(STATUS_ORDER.filter((s) => s !== openStatus)));
-    setSectionsInitialized(true);
-  }, [tasks, sectionsInitialized, selectedTaskId]);
+  }
   const isGeneralSelected = selectedTaskId === "general" || selectedTaskId === null;
   const filteredTasks = useMemo(() => {
     if (!searchQuery.trim()) return tasks;
@@ -114,19 +113,14 @@ export function TaskSidebar({
     () => tasks.find((t) => t.id === selectedTaskId) ?? null,
     [tasks, selectedTaskId]
   );
-  const prevSelectedStatusRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!selectedTask) {
-      prevSelectedStatusRef.current = null;
-      return;
-    }
-    const currentStatus = selectedTask.status;
-    if (prevSelectedStatusRef.current !== currentStatus) {
-      prevSelectedStatusRef.current = currentStatus;
+  const [prevSelectedStatus, setPrevSelectedStatus] = useState<string | null>(null);
+  const currentStatus = selectedTask?.status ?? null;
+  if (currentStatus !== prevSelectedStatus) {
+    setPrevSelectedStatus(currentStatus);
+    if (currentStatus) {
       setCollapsedSections(new Set(STATUS_ORDER.filter((s) => s !== currentStatus)));
     }
-  }, [selectedTask]);
+  }
 
   return (
     <div className="flex h-full flex-col bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)]">

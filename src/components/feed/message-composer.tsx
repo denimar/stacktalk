@@ -10,6 +10,7 @@ import {
   type ClipboardEvent,
   type DragEvent,
 } from "react";
+import Image from "next/image";
 import {
   Bold,
   Italic,
@@ -69,7 +70,6 @@ function generateUUID(): string {
 }
 
 export function MessageComposer({
-  projectId,
   taskId,
   parentMessageId,
   placeholder,
@@ -365,10 +365,13 @@ export function MessageComposer({
                     key={attachment.id}
                     className="relative size-20 shrink-0 overflow-hidden rounded-lg border border-[var(--border-subtle)]"
                   >
-                    <img
+                    <Image
                       src={attachment.previewUrl}
                       alt="attachment preview"
                       className="size-full object-cover"
+                      width={80}
+                      height={80}
+                      unoptimized
                     />
                     {attachment.uploading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/50">

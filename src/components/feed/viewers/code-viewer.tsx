@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Loader2, AlertCircle, Copy, Check, ChevronDown } from "lucide-react";
+import { Loader2, AlertCircle, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import hljs from "highlight.js/lib/core";
 
@@ -204,23 +204,24 @@ export function CodeViewer({ url, fileName }: CodeViewerProps) {
   const language = useMemo(() => detectLanguageFromFileName(fileName), [fileName]);
   const languageLabel = LANGUAGE_LABELS[language] ?? language;
 
-  useEffect(() => {
+  const fetchContent = useCallback(async (targetUrl: string) => {
     setIsLoading(true);
     setError(null);
-    fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
-        return res.text();
-      })
-      .then((text) => {
-        setContent(text);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load file");
-        setIsLoading(false);
-      });
-  }, [url]);
+    try {
+      const res = await fetch(targetUrl);
+      if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
+      const text = await res.text();
+      setContent(text);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load file");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchContent(url);
+  }, [url, fetchContent]);
 
   const highlighted = useMemo(() => {
     if (!content) return null;

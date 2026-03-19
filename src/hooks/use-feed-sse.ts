@@ -27,23 +27,12 @@ export function useFeedSSE(projectId: string, taskId?: string | null, onAgentMes
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onAgentMessageRef = useRef(onAgentMessage);
-  onAgentMessageRef.current = onAgentMessage;
+  const connectRef = useRef<() => void>(() => {});
 
-  const loadInitialMessages = useCallback(async () => {
-    setMessages([]);
-    setInitialLoaded(false);
-    try {
-      const taskParam = taskId !== undefined && taskId !== null ? `&taskId=${taskId}` : "";
-      const res = await fetch(`/api/feed/messages?projectId=${projectId}${taskParam}`);
-      if (res.ok) {
-        const json = await res.json();
-        setMessages(json.data);
-        setInitialLoaded(true);
-      }
-    } catch (error) {
-      console.error("Failed to load initial messages", { error });
-    }
-  }, [projectId, taskId]);
+  useEffect(() => {
+    onAgentMessageRef.current = onAgentMessage;
+  }, [onAgentMessage]);
+
 
   const connect = useCallback(() => {
     if (eventSourceRef.current) {
@@ -61,7 +50,7 @@ export function useFeedSSE(projectId: string, taskId?: string | null, onAgentMes
       eventSourceRef.current = null;
       const delay = reconnectDelayRef.current;
       reconnectDelayRef.current = Math.min(delay * 2, MAX_RECONNECT_DELAY_MS);
-      reconnectTimerRef.current = setTimeout(connect, delay);
+      reconnectTimerRef.current = setTimeout(() => connectRef.current(), delay);
     };
     es.addEventListener("message:created", (e) => {
       const msg = JSON.parse(e.data) as TaskMessageResponse;
@@ -141,8 +130,35 @@ export function useFeedSSE(projectId: string, taskId?: string | null, onAgentMes
   }, [projectId, taskId]);
 
   useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  const [prevFetchKey, setPrevFetchKey] = useState("");
+  const fetchKey = `${projectId}:${taskId ?? ""}`;
+  if (fetchKey !== prevFetchKey && projectId) {
+    setPrevFetchKey(fetchKey);
+    setMessages([]);
+    setInitialLoaded(false);
+  }
+
+  useEffect(() => {
     if (!projectId) return;
-    loadInitialMessages();
+    const abortController = new AbortController();
+    (async () => {
+      try {
+        const taskParam = taskId !== undefined && taskId !== null ? `&taskId=${taskId}` : "";
+        const res = await fetch(`/api/feed/messages?projectId=${projectId}${taskParam}`, { signal: abortController.signal });
+        if (res.ok) {
+          const json = await res.json();
+          setMessages(json.data);
+          setInitialLoaded(true);
+        }
+      } catch (error) {
+        if (!(error instanceof DOMException && (error as DOMException).name === "AbortError")) {
+          console.error("Failed to load initial messages", { error });
+        }
+      }
+    })();
     connect();
     typingTimerRef.current = setInterval(() => {
       setTypingUsers((prev) => {
@@ -152,12 +168,13 @@ export function useFeedSSE(projectId: string, taskId?: string | null, onAgentMes
       });
     }, 1000);
     return () => {
+      abortController.abort();
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (typingTimerRef.current) clearInterval(typingTimerRef.current);
     };
-  }, [connect, loadInitialMessages]);
+  }, [connect, projectId, taskId]);
 
   const sendMessage = useCallback(
     async (content: string, parentMessageId?: string, attachments?: { s3Key: string; fileName: string; fileType: string; fileSize: number }[]) => {

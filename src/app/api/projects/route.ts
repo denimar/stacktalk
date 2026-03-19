@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       where: { userId: authResult.id },
       include: {
         project: {
-          select: { id: true, name: true, description: true, gitRepository: true, deletedAt: true },
+          select: { id: true, name: true, description: true, gitRepository: true, setupInstructions: true, deletedAt: true },
         },
       },
       orderBy: { createdAt: "asc" },
@@ -18,11 +18,17 @@ export async function GET(request: NextRequest) {
     let projects = userProjects
       .map((up) => up.project)
       .filter((p) => !p.deletedAt)
-      .map(({ deletedAt: _, ...p }) => p);
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        gitRepository: p.gitRepository,
+        setupInstructions: p.setupInstructions,
+      }));
     if (projects.length === 0) {
       const allProjects = await prisma.project.findMany({
         where: { deletedAt: null },
-        select: { id: true, name: true, description: true, gitRepository: true },
+        select: { id: true, name: true, description: true, gitRepository: true, setupInstructions: true },
         orderBy: { createdAt: "asc" },
         take: 10,
       });
@@ -45,10 +51,11 @@ export async function POST(request: NextRequest) {
     const authResult = await getAuthenticatedUser(request);
     if (isAuthError(authResult)) return authResult;
     const body = await request.json();
-    const { name, description = "", gitRepository = "" } = body as {
+    const { name, description = "", gitRepository = "", setupInstructions = "" } = body as {
       name?: string;
       description?: string;
       gitRepository?: string;
+      setupInstructions?: string;
     };
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
@@ -61,8 +68,9 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: typeof description === "string" ? description.trim() : "",
         gitRepository: typeof gitRepository === "string" ? gitRepository.trim() : "",
+        setupInstructions: typeof setupInstructions === "string" ? setupInstructions.trim() : "",
       },
-      select: { id: true, name: true, description: true, gitRepository: true },
+      select: { id: true, name: true, description: true, gitRepository: true, setupInstructions: true },
     });
     await prisma.userProject.create({
       data: {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import {
   MessageSquare,
   Loader2,
@@ -213,7 +214,7 @@ function renderContent(
       };
       const canPreview = !!onOpenFileViewer;
       segments.push(
-        <img
+        <Image
           key={`img-${match.index}`}
           src={src}
           alt={alt || "image"}
@@ -222,6 +223,9 @@ function renderContent(
             canPreview && "cursor-pointer transition-opacity hover:opacity-80"
           )}
           loading="lazy"
+          width={384}
+          height={150}
+          unoptimized
           onClick={canPreview ? () => onOpenFileViewer(imageFile) : undefined}
         />
       );
