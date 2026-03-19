@@ -25,9 +25,9 @@ function getState(): CodespacesState {
 function getToken(): string {
   const state = getState();
   if (!state.token) {
-    const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+    const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN || process.env.GH_PERSONAL_ACCESS_TOKEN;
     if (!token) {
-      throw new Error("GITHUB_PERSONAL_ACCESS_TOKEN environment variable is not set");
+      throw new Error("GITHUB_PERSONAL_ACCESS_TOKEN (or GH_PERSONAL_ACCESS_TOKEN) environment variable is not set");
     }
     state.token = token;
   }
@@ -265,5 +265,5 @@ export async function deployToPreview(
 }
 
 export function isCodespacesEnabled(): boolean {
-  return !!process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+  return !!(process.env.GITHUB_PERSONAL_ACCESS_TOKEN || process.env.GH_PERSONAL_ACCESS_TOKEN);
 }

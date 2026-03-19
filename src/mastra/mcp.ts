@@ -20,7 +20,7 @@ export const mcpClient = new MCPClient({
       args: ['-y', '@modelcontextprotocol/server-github'],
       env: {
         GITHUB_PERSONAL_ACCESS_TOKEN:
-          process.env.GITHUB_PERSONAL_ACCESS_TOKEN ?? '',
+          process.env.GITHUB_PERSONAL_ACCESS_TOKEN || process.env.GH_PERSONAL_ACCESS_TOKEN || '',
       },
     },
     postgres: {

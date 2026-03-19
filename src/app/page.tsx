@@ -56,7 +56,7 @@ export default function HomePage() {
             className="mt-3 text-lg text-[var(--text-secondary)]"
             style={{ fontFamily: "var(--font-syne), sans-serif" }}
           >
-            Conversational Webapp Builder DDDDDDDDD
+            Conversational Webapp Builder EEEEEE
           </p>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-[var(--text-muted)]">
             Turn your ideas into fully functional applications through natural dialogue.

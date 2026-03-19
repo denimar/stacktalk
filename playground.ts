@@ -2,7 +2,7 @@ import "dotenv/config";
 import { execSync } from "child_process";
 
 const PORT = 3006;
-const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN || process.env.GH_PERSONAL_ACCESS_TOKEN;
 
 const NVM_PREFIX = "source /usr/local/share/nvm/nvm.sh && nvm use default > /dev/null 2>&1;";
 
