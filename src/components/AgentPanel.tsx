@@ -4,7 +4,7 @@ import { Agent } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CodeViewer } from "./CodeViewer";
-import { Bot, CheckCircle, XCircle, Loader2, Camera } from "lucide-react";
+import { Bot, CheckCircle, XCircle, Loader2, Camera, ExternalLink } from "lucide-react";
 
 interface AgentPanelProps {
   agent: Agent;
@@ -87,8 +87,33 @@ export function AgentPanel({ agent }: AgentPanelProps) {
           </div>
         )}
 
+        {/* Live Preview (Runloop) */}
+        {agent.previewUrl && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+              <ExternalLink className="size-3" />
+              Live Preview
+            </p>
+            <a
+              href={agent.previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+            >
+              <ExternalLink className="size-4 shrink-0" />
+              <span className="truncate">{agent.previewUrl}</span>
+            </a>
+            <iframe
+              src={agent.previewUrl}
+              title="Live Preview"
+              className="mt-2 w-full h-64 rounded-md border border-border"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          </div>
+        )}
+
         {/* Before / After Screenshots */}
-        {agent.screenshots && (
+        {!agent.previewUrl && agent.screenshots && (
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
               <Camera className="size-3" />

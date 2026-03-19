@@ -79,6 +79,27 @@ kill $(cat /tmp/stacktalk-worktree-dev.pid) 2>/dev/null || true
 ### Main repo path (for worktree bootstrap)
 `/home/denimar/projects/personal/stacktalk`
 
+## Runloop DevBox Preview Deployment
+
+For projects with a `gitRepository`, Stacktalk can deploy changes to a **Runloop DevBox** and provide a live preview URL via tunnel, instead of taking local Playwright screenshots.
+
+### How it works
+1. When a task is created for a project with `gitRepository` and `RUNLOOP_API_KEY` is set, the project is flagged with `useRunloop: true`
+2. After the agent writes files locally, they are synced to the devbox via the Runloop SDK
+3. The devbox runs a dev server with HMR, so changes appear in seconds
+4. A tunnel URL (`https://{port}-{key}.tunnel.runloop.ai`) is returned as the preview
+5. The `AgentPanel` shows a clickable link + inline iframe instead of screenshots
+
+### Environment variables
+- `RUNLOOP_API_KEY` (required) — Runloop API key
+- `RUNLOOP_DEVBOX_ID` (optional) — defaults to `dbx_32kLtj2SBgB1jiuXG1AZ5`
+
+### Key module
+- `src/lib/runloop-deployer.ts` — Runloop integration (init devbox, enable tunnel, sync files, deploy)
+
+### Local projects
+Local projects (stacktalk, encore-web) without `gitRepository` continue using the local screenshot workflow unchanged.
+
 ## VERY IMPORTANT
 
 - **RESPONSIVENESS** the responsiveness should be mobile firstt

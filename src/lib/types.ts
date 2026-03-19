@@ -4,6 +4,7 @@ export interface Project {
   dir: string;
   gitRepository?: string;
   devUrl?: string;
+  useRunloop?: boolean;
 }
 
 export const PROJECTS: Project[] = [
@@ -43,6 +44,7 @@ export interface Agent {
   output: string | null;
   codeBlocks: string[];
   screenshots: AgentScreenshots | null;
+  previewUrl: string | null;
   error: string | null;
 }
 

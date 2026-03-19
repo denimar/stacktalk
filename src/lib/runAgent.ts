@@ -4,6 +4,7 @@ import { runLlmAgent } from "./llm-provider";
 import { getProjectContext } from "./projectContext";
 import { parseFilesFromResponse, writeFilesToProject } from "./fileWriter";
 import { takeScreenshot, takeAfterScreenshot, captureWithThemes } from "./screenshotRunner";
+import { deployToPreview } from "./runloop-deployer";
 import { MastraAgentId } from "./mastraRunner";
 
 const OUTPUT_INSTRUCTIONS = `
@@ -125,6 +126,7 @@ export function createAgents(taskId: string, count: number = 1): Agent[] {
       output: null,
       codeBlocks: [],
       screenshots: null,
+      previewUrl: null,
       error: null,
     });
   }
@@ -194,9 +196,9 @@ export async function executeAgent(
         `Found ${parsedFiles.length} file(s): ${parsedFiles.map((f) => f.filePath).join(", ")}`
       );
 
-      // Take BEFORE screenshot (before writing files)
+      // Take BEFORE screenshot (before writing files) — only for local projects
       let beforeFile: string | null = null;
-      if (project.devUrl) {
+      if (!project.useRunloop && project.devUrl) {
         appendAgentLog(taskId, agent.id, "Taking BEFORE screenshot...");
         const beforeName = `${taskId}-${agent.id}-before.png`;
         beforeFile = await takeScreenshot(project.devUrl, beforeName);
@@ -221,8 +223,23 @@ export async function executeAgent(
         `Applied ${result.written.length} file(s) to ${project.dir}`
       );
 
-      // Take AFTER screenshot with retry until page changes
-      if (project.devUrl && result.written.length > 0 && beforeFile) {
+      let previewUrl: string | null = null;
+
+      if (project.useRunloop && result.written.length > 0) {
+        // Deploy to Runloop devbox and get preview URL
+        try {
+          previewUrl = await deployToPreview(
+            project,
+            parsedFiles,
+            (message) => appendAgentLog(taskId, agent.id, message)
+          );
+          appendAgentLog(taskId, agent.id, `Preview deployed: ${previewUrl}`);
+        } catch (deployError) {
+          const deployMsg = deployError instanceof Error ? deployError.message : String(deployError);
+          appendAgentLog(taskId, agent.id, `Runloop deploy failed: ${deployMsg}`);
+        }
+      } else if (!project.useRunloop && project.devUrl && result.written.length > 0 && beforeFile) {
+        // Take AFTER screenshot with retry until page changes (local workflow)
         appendAgentLog(taskId, agent.id, "Waiting for dev server recompilation...");
         await new Promise((resolve) => setTimeout(resolve, 5000));
         const afterName = `${taskId}-${agent.id}-after.png`;
@@ -252,14 +269,14 @@ export async function executeAgent(
           appendAgentLog(taskId, agent.id, "Dark/light themed screenshots captured.");
         }
       }
+
+      updateAgent(taskId, agent.id, { previewUrl });
     } else {
       appendAgentLog(taskId, agent.id, "No files with path headers found to apply.");
     }
 
     appendAgentLog(taskId, agent.id, "Agent completed successfully.");
 
-    // Set status to "completed" AFTER screenshots are done
-    // so the frontend keeps polling until everything is ready
     updateAgent(taskId, agent.id, {
       status: "completed",
       screenshots: agentScreenshots,
