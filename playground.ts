@@ -42,16 +42,16 @@ async function updateCodespace(repo: string, branch: string): Promise<string> {
 
   // Switch branch and install
   csExec(name, `cd /workspaces/* && git fetch --all && git checkout ${branch} && git pull origin ${branch}`);
-  csExec(name, "cd /workspaces/* && npm install");
+  csExec(name, "cd /workspaces/* && pnpm install");
 
   // Kill existing dev server and restart
   try {
-    csExec(name, "pkill -f 'npm run dev' || exit 0");
+    csExec(name, "pkill -f 'pnpm run dev' || exit 0");
   } catch {
     console.log("No existing dev server to kill");
   }
   await new Promise((resolve) => setTimeout(resolve, 1000));
-  csExec(name, "cd /workspaces/* && nohup npm run dev -- --hostname 0.0.0.0 > /tmp/dev.log 2>&1 &");
+  csExec(name, "cd /workspaces/* && nohup pnpm run dev -- --hostname 0.0.0.0 > /tmp/dev.log 2>&1 &");
   console.log("Dev server starting...");
   await new Promise((resolve) => setTimeout(resolve, 8000));
 

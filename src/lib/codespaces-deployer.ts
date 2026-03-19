@@ -137,11 +137,11 @@ async function initializeDevServer(
   onLog?: (msg: string) => void
 ): Promise<void> {
   onLog?.("Installing dependencies on codespace...");
-  await executeCommand(codespaceName, "cd /workspaces/* && npm install");
+  await executeCommand(codespaceName, "cd /workspaces/* && pnpm install");
   onLog?.("Starting dev server...");
   await executeCommand(
     codespaceName,
-    "cd /workspaces/* && nohup npm run dev -- --hostname 0.0.0.0 > /tmp/dev.log 2>&1 &"
+    "cd /workspaces/* && nohup pnpm run dev -- --hostname 0.0.0.0 > /tmp/dev.log 2>&1 &"
   );
   onLog?.("Dev server starting in background...");
   await new Promise((resolve) => setTimeout(resolve, 5000));
