@@ -52,6 +52,12 @@ export function AppToolbar() {
       </div>
 
       <div className="ml-2 sm:ml-6 flex shrink-0 items-center gap-2 xl:ml-10 xl:gap-3">
+        <button
+          className="rounded-md px-3 py-1.5 text-sm font-medium bg-yellow-400 text-yellow-900 hover:bg-yellow-300 transition-colors duration-150"
+          onClick={() => alert("Yellow button clicked!")}
+        >
+          Yellow
+        </button>
         <UserMenu />
       </div>
     </header>
