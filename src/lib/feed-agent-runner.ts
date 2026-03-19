@@ -166,16 +166,6 @@ export async function runFeedAgent(params: FeedAgentRunParams): Promise<void> {
       where: { id: dbTaskId },
       data: { status: "in_progress" },
     });
-    if (project.gitRepository) {
-      await createTaskMessage(
-        `Preparing repository: \`${project.gitRepository}\`\nLocal path: \`${project.dir}\``,
-        "agent",
-        agentDbId,
-        projectId,
-        dbTaskId,
-        agentAuthor
-      );
-    }
     const inMemoryTask = createTask(description, projectId);
     const agents = createAgents(inMemoryTask.id, 1);
     for (const agent of agents) {

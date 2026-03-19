@@ -143,8 +143,24 @@ async function initializeDevServer(
     codespaceName,
     "cd /workspaces/* && nohup pnpm run dev -- --hostname 0.0.0.0 > /tmp/dev.log 2>&1 &"
   );
-  onLog?.("Dev server starting in background...");
-  await new Promise((resolve) => setTimeout(resolve, 5000));
+  onLog?.("Waiting for dev server to start...");
+  for (let i = 0; i < 15; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const result = await executeCommand(
+        codespaceName,
+        `curl -s -o /dev/null -w '%{http_code}' http://localhost:${DEV_PORT} || echo 'not_ready'`
+      );
+      if (result.trim() !== "not_ready" && result.trim() !== "000") {
+        onLog?.(`Dev server is responding (HTTP ${result.trim()})`);
+        return;
+      }
+    } catch {
+      // server not ready yet
+    }
+    onLog?.(`Waiting for dev server... (${i + 1}/15)`);
+  }
+  onLog?.("Dev server may not be fully ready, proceeding anyway...");
 }
 
 async function executeCommand(
@@ -165,6 +181,40 @@ async function executeCommand(
   return result;
 }
 
+async function setPortPublic(
+  codespaceName: string,
+  token: string,
+  onLog?: (msg: string) => void
+): Promise<void> {
+  const { execSync } = await import("child_process");
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      execSync(
+        `GITHUB_TOKEN=${token} gh cs ports visibility ${DEV_PORT}:public -c ${codespaceName}`,
+        { encoding: "utf-8", timeout: 30000 }
+      );
+      const portsOutput = execSync(
+        `GITHUB_TOKEN=${token} gh cs ports -c ${codespaceName} --json sourcePort,visibility`,
+        { encoding: "utf-8", timeout: 15000 }
+      );
+      const ports = JSON.parse(portsOutput);
+      const port = ports.find(
+        (p: { sourcePort: number; visibility: string }) =>
+          p.sourcePort === DEV_PORT
+      );
+      if (port?.visibility === "public") {
+        onLog?.(`Port ${DEV_PORT} confirmed public`);
+        return;
+      }
+      onLog?.(`Port visibility is "${port?.visibility}", retrying (${attempt}/3)...`);
+    } catch (err) {
+      onLog?.(`Port visibility attempt ${attempt} failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  onLog?.("Warning: Could not confirm port is public. Preview may require GitHub authentication.");
+}
+
 async function getPreviewUrl(
   codespaceName: string,
   onLog?: (msg: string) => void
@@ -172,22 +222,15 @@ async function getPreviewUrl(
   onLog?.("Setting up port forwarding...");
   const { execSync } = await import("child_process");
   const token = getToken();
-  try {
-    execSync(
-      `GITHUB_TOKEN=${token} gh cs ports visibility ${DEV_PORT}:public -c ${codespaceName}`,
-      { encoding: "utf-8", timeout: 30000 }
-    );
-  } catch (err) {
-    onLog?.(`Port visibility command failed, port may already be public: ${err instanceof Error ? err.message : String(err)}`);
-  }
+  await setPortPublic(codespaceName, token, onLog);
   const portsOutput = execSync(
-    `GITHUB_TOKEN=${token} gh cs ports -c ${codespaceName} --json label,browseUrl`,
+    `GITHUB_TOKEN=${token} gh cs ports -c ${codespaceName} --json label,browseUrl,sourcePort`,
     { encoding: "utf-8", timeout: 15000 }
   );
   const ports = JSON.parse(portsOutput);
   const devPort = ports.find(
-    (p: { label: string; browseUrl: string }) =>
-      p.browseUrl?.includes(`-${DEV_PORT}.`)
+    (p: { sourcePort: number; label: string; browseUrl: string }) =>
+      p.sourcePort === DEV_PORT || p.browseUrl?.includes(`-${DEV_PORT}.`)
   );
   if (devPort?.browseUrl) {
     onLog?.(`Preview URL: ${devPort.browseUrl}`);
