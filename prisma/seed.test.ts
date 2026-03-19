@@ -117,7 +117,7 @@ describe("Seed projects data", () => {
     expect(marketing?.gitRepository).toBe("github.com/pipelord/marketing");
     expect(marketing?.description).toBe("Company marketing website redesign");
     const stacktalk = projects.find((p) => p.name === "StackTalk Platform");
-    expect(stacktalk?.gitRepository).toBe("git@github.com:viaencore/stacktalk.git");
+    expect(stacktalk?.gitRepository).toBe("git@github.com:denimar/stacktalk.git");
     expect(stacktalk?.description).toBe("Conversational webapp builder powered by AI agents");
     const devops = projects.find((p) => p.name === "DevOps Pipeline");
     expect(devops?.gitRepository).toBe("github.com/pipelord/devops");

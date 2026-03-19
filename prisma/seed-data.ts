@@ -65,7 +65,7 @@ export const projects: SeedProject[] = [
   { name: DEFAULT_PROJECT_NAME, gitRepository: "github.com/denimar/pipelord", description: "AI agent orchestration and task management" },
   { name: "E-Commerce API", gitRepository: "github.com/pipelord/ecommerce", description: "RESTful API for online marketplace" },
   { name: "Marketing Site", gitRepository: "github.com/pipelord/marketing", description: "Company marketing website redesign" },
-  { name: "StackTalk Platform", gitRepository: "git@github.com:viaencore/stacktalk.git", description: "Conversational webapp builder powered by AI agents" },
+  { name: "StackTalk Platform", gitRepository: "git@github.com:denimar/stacktalk.git", description: "Conversational webapp builder powered by AI agents" },
   { name: "DevOps Pipeline", gitRepository: "github.com/pipelord/devops", description: "CI/CD automation and infrastructure" },
   { name: "Unassigned", gitRepository: "", description: "Default project for existing tasks" },
 ];
