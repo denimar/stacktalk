@@ -56,3 +56,5 @@ src/
     └── globals.css   # Global styles and Tailwind config
 public/           # Static assets
 ```
+
+-
