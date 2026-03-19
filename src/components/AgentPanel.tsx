@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CodeViewer } from "./CodeViewer";
 import Image from "next/image";
-import { Bot, CheckCircle, XCircle, Loader2, Camera, ExternalLink } from "lucide-react";
+import { Bot, CheckCircle, XCircle, Loader2, Camera, ExternalLink, GitBranch } from "lucide-react";
 
 interface AgentPanelProps {
   agent: Agent;
@@ -85,6 +85,26 @@ export function AgentPanel({ agent }: AgentPanelProps) {
               {agent.output.slice(0, 500)}
               {agent.output.length > 500 && "..."}
             </div>
+          </div>
+        )}
+
+        {/* Branch */}
+        {agent.branchName && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+              <GitBranch className="size-3" />
+              Branch
+            </p>
+            <a
+              href={agent.branchUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm font-mono text-foreground hover:bg-accent transition-colors"
+            >
+              <GitBranch className="size-4 shrink-0 text-green-500" />
+              <span className="truncate">{agent.branchName}</span>
+              <ExternalLink className="size-3 shrink-0 text-muted-foreground ml-auto" />
+            </a>
           </div>
         )}
 

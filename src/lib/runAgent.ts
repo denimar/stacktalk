@@ -1,10 +1,11 @@
 import { Agent, AgentScreenshots, Project } from "./types";
 import { appendAgentLog, updateAgent } from "./store";
-import { runLlmAgent } from "./llm-provider";
+import { runLlmAgent, getLlmProvider } from "./llm-provider";
 import { getProjectContext } from "./projectContext";
 import { parseFilesFromResponse, writeFilesToProject } from "./fileWriter";
 import { takeScreenshot, takeAfterScreenshot, captureWithThemes } from "./screenshotRunner";
 import { deployToPreview } from "./codespaces-deployer";
+import { createWorktree, commitAndPush, cleanupWorktree } from "./git-worktree-deployer";
 import { MastraAgentId } from "./mastraRunner";
 
 const OUTPUT_INSTRUCTIONS = `
@@ -127,6 +128,8 @@ export function createAgents(taskId: string, count: number = 1): Agent[] {
       codeBlocks: [],
       screenshots: null,
       previewUrl: null,
+      branchName: null,
+      branchUrl: null,
       error: null,
     });
   }
@@ -196,77 +199,137 @@ export async function executeAgent(
         `Found ${parsedFiles.length} file(s): ${parsedFiles.map((f) => f.filePath).join(", ")}`
       );
 
-      // Take BEFORE screenshot (before writing files) — only for local projects
-      let beforeFile: string | null = null;
-      if (!project.useCodespaces && project.devUrl) {
-        appendAgentLog(taskId, agent.id, "Taking BEFORE screenshot...");
-        const beforeName = `${taskId}-${agent.id}-before.png`;
-        beforeFile = await takeScreenshot(project.devUrl, beforeName);
-        if (beforeFile) {
-          appendAgentLog(taskId, agent.id, "Before screenshot captured.");
-        } else {
-          appendAgentLog(taskId, agent.id, `Before screenshot failed (${project.devUrl} unreachable?)`);
-        }
-      }
-
-      const result = await writeFilesToProject(project.dir, parsedFiles);
-
-      for (const file of result.written) {
-        appendAgentLog(taskId, agent.id, `Wrote: ${file}`);
-      }
-      for (const err of result.errors) {
-        appendAgentLog(taskId, agent.id, `Failed to write ${err.file}: ${err.error}`);
-      }
-      appendAgentLog(
-        taskId,
-        agent.id,
-        `Applied ${result.written.length} file(s) to ${project.dir}`
-      );
-
+      // Determine if this is subscription mode with a git repo
+      const provider = await getLlmProvider();
+      const useWorktreeFlow = provider === "claude-subscription" && !!project.gitRepository;
       let previewUrl: string | null = null;
 
-      if (project.useCodespaces && result.written.length > 0) {
-        // Deploy to GitHub Codespace and get preview URL
+      if (useWorktreeFlow) {
+        // === WORKTREE FLOW: create worktree → write files → commit → push → deploy codespace → cleanup ===
+        let worktreeInfo: { worktreeDir: string; branchName: string; branchUrl: string } | null = null;
         try {
-          previewUrl = await deployToPreview(
-            project,
-            parsedFiles,
-            (message) => appendAgentLog(taskId, agent.id, message)
+          worktreeInfo = await createWorktree(
+            project.dir,
+            project.gitRepository!,
+            taskId,
+            agent.name,
+            (msg) => appendAgentLog(taskId, agent.id, msg)
           );
-          appendAgentLog(taskId, agent.id, `Preview deployed: ${previewUrl}`);
-        } catch (deployError) {
-          const deployMsg = deployError instanceof Error ? deployError.message : String(deployError);
-          appendAgentLog(taskId, agent.id, `Codespaces deploy failed: ${deployMsg}`);
+          updateAgent(taskId, agent.id, {
+            branchName: worktreeInfo.branchName,
+            branchUrl: worktreeInfo.branchUrl,
+          });
+          // Write files to the worktree directory (isolated from main branch)
+          const result = await writeFilesToProject(worktreeInfo.worktreeDir, parsedFiles);
+          for (const file of result.written) {
+            appendAgentLog(taskId, agent.id, `Wrote: ${file}`);
+          }
+          for (const err of result.errors) {
+            appendAgentLog(taskId, agent.id, `Failed to write ${err.file}: ${err.error}`);
+          }
+          appendAgentLog(taskId, agent.id, `Applied ${result.written.length} file(s) to worktree`);
+          if (result.written.length > 0) {
+            // Commit and push from the worktree
+            await commitAndPush(
+              worktreeInfo.worktreeDir,
+              worktreeInfo.branchName,
+              result.written,
+              taskId,
+              agent.name,
+              (msg) => appendAgentLog(taskId, agent.id, msg)
+            );
+            // Deploy codespace from the new branch
+            try {
+              previewUrl = await deployToPreview(
+                project,
+                parsedFiles,
+                (msg) => appendAgentLog(taskId, agent.id, msg),
+                worktreeInfo.branchName
+              );
+              appendAgentLog(taskId, agent.id, `Preview deployed: ${previewUrl}`);
+            } catch (deployError) {
+              const deployMsg = deployError instanceof Error ? deployError.message : String(deployError);
+              appendAgentLog(taskId, agent.id, `Codespaces deploy failed: ${deployMsg}`);
+            }
+          }
+        } catch (worktreeError) {
+          const errMsg = worktreeError instanceof Error ? worktreeError.message : String(worktreeError);
+          appendAgentLog(taskId, agent.id, `Worktree flow failed: ${errMsg}`);
+        } finally {
+          // Always clean up the worktree to return to original branch state
+          if (worktreeInfo) {
+            await cleanupWorktree(
+              project.dir,
+              worktreeInfo.worktreeDir,
+              (msg) => appendAgentLog(taskId, agent.id, msg)
+            );
+          }
         }
-      } else if (!project.useCodespaces && project.devUrl && result.written.length > 0 && beforeFile) {
-        // Take AFTER screenshot with retry until page changes (local workflow)
-        appendAgentLog(taskId, agent.id, "Waiting for dev server recompilation...");
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        const afterName = `${taskId}-${agent.id}-after.png`;
-        const afterFile = await takeAfterScreenshot(
-          project.devUrl,
-          afterName,
-          beforeFile,
-          (message) => appendAgentLog(taskId, agent.id, message)
-        );
-        if (afterFile) {
-          agentScreenshots = { before: beforeFile, after: afterFile };
-          appendAgentLog(taskId, agent.id, "After screenshot captured.");
-        } else {
-          appendAgentLog(taskId, agent.id, "After screenshot failed.");
+      } else {
+        // === STANDARD FLOW: write files directly, then screenshot or codespace deploy ===
+
+        // Take BEFORE screenshot (before writing files) — only for local projects
+        let beforeFile: string | null = null;
+        if (!project.useCodespaces && project.devUrl) {
+          appendAgentLog(taskId, agent.id, "Taking BEFORE screenshot...");
+          const beforeName = `${taskId}-${agent.id}-before.png`;
+          beforeFile = await takeScreenshot(project.devUrl, beforeName);
+          if (beforeFile) {
+            appendAgentLog(taskId, agent.id, "Before screenshot captured.");
+          } else {
+            appendAgentLog(taskId, agent.id, `Before screenshot failed (${project.devUrl} unreachable?)`);
+          }
         }
-        // Capture dark + light themed screenshots
-        appendAgentLog(taskId, agent.id, "Taking dark/light themed screenshots...");
-        const themedName = `${taskId}-${agent.id}-themed.png`;
-        const themed = await captureWithThemes(
-          project.devUrl,
-          themedName,
-          (message) => appendAgentLog(taskId, agent.id, message)
-        );
-        if (themed && agentScreenshots) {
-          agentScreenshots.darkAfter = themed.dark;
-          agentScreenshots.lightAfter = themed.light;
-          appendAgentLog(taskId, agent.id, "Dark/light themed screenshots captured.");
+
+        const result = await writeFilesToProject(project.dir, parsedFiles);
+        for (const file of result.written) {
+          appendAgentLog(taskId, agent.id, `Wrote: ${file}`);
+        }
+        for (const err of result.errors) {
+          appendAgentLog(taskId, agent.id, `Failed to write ${err.file}: ${err.error}`);
+        }
+        appendAgentLog(taskId, agent.id, `Applied ${result.written.length} file(s) to ${project.dir}`);
+
+        if (project.useCodespaces && result.written.length > 0) {
+          try {
+            previewUrl = await deployToPreview(
+              project,
+              parsedFiles,
+              (msg) => appendAgentLog(taskId, agent.id, msg)
+            );
+            appendAgentLog(taskId, agent.id, `Preview deployed: ${previewUrl}`);
+          } catch (deployError) {
+            const deployMsg = deployError instanceof Error ? deployError.message : String(deployError);
+            appendAgentLog(taskId, agent.id, `Codespaces deploy failed: ${deployMsg}`);
+          }
+        } else if (!project.useCodespaces && project.devUrl && result.written.length > 0 && beforeFile) {
+          appendAgentLog(taskId, agent.id, "Waiting for dev server recompilation...");
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          const afterName = `${taskId}-${agent.id}-after.png`;
+          const afterFile = await takeAfterScreenshot(
+            project.devUrl,
+            afterName,
+            beforeFile,
+            (msg) => appendAgentLog(taskId, agent.id, msg)
+          );
+          if (afterFile) {
+            agentScreenshots = { before: beforeFile, after: afterFile };
+            appendAgentLog(taskId, agent.id, "After screenshot captured.");
+          } else {
+            appendAgentLog(taskId, agent.id, "After screenshot failed.");
+          }
+          appendAgentLog(taskId, agent.id, "Taking dark/light themed screenshots...");
+          const themedName = `${taskId}-${agent.id}-themed.png`;
+          const themed = await captureWithThemes(
+            project.devUrl,
+            themedName,
+            (msg) => appendAgentLog(taskId, agent.id, msg)
+          );
+          if (themed && agentScreenshots) {
+            agentScreenshots.darkAfter = themed.dark;
+            agentScreenshots.lightAfter = themed.light;
+            appendAgentLog(taskId, agent.id, "Dark/light themed screenshots captured.");
+          }
         }
       }
 

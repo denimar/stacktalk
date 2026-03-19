@@ -59,10 +59,11 @@ async function githubFetch(path: string, options: RequestInit = {}): Promise<Res
 async function findOrCreateCodespace(
   owner: string,
   repo: string,
-  onLog?: (msg: string) => void
+  onLog?: (msg: string) => void,
+  branch?: string
 ): Promise<string> {
   const state = getState();
-  const projectKey = `${owner}/${repo}`;
+  const projectKey = branch ? `${owner}/${repo}:${branch}` : `${owner}/${repo}`;
   const existing = state.activeCodespaces.get(projectKey);
   if (existing) {
     onLog?.(`Reusing codespace: ${existing.name}`);
@@ -89,12 +90,13 @@ async function findOrCreateCodespace(
       return stopped.name;
     }
   }
-  onLog?.(`Creating new codespace for ${owner}/${repo}...`);
+  const ref = branch || "main";
+  onLog?.(`Creating new codespace for ${owner}/${repo} (ref: ${ref})...`);
   const createRes = await githubFetch(`/repos/${owner}/${repo}/codespaces`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      ref: "main",
+      ref,
       machine: "basicLinux32gb",
       display_name: `stacktalk-${repo}`,
     }),
@@ -239,16 +241,17 @@ async function syncFiles(
 export async function deployToPreview(
   project: Project,
   parsedFiles: ParsedFile[],
-  onLog: (msg: string) => void
+  onLog: (msg: string) => void,
+  branch?: string
 ): Promise<string> {
   if (!project.gitRepository) {
     throw new Error("Project has no gitRepository configured");
   }
   onLog("Deploying to GitHub Codespace preview...");
   const { owner, repo } = parseGitRepo(project.gitRepository);
-  const codespaceName = await findOrCreateCodespace(owner, repo, onLog);
+  const codespaceName = await findOrCreateCodespace(owner, repo, onLog, branch);
   const state = getState();
-  const projectKey = `${owner}/${repo}`;
+  const projectKey = branch ? `${owner}/${repo}:${branch}` : `${owner}/${repo}`;
   const cached = state.activeCodespaces.get(projectKey);
   if (!cached?.previewUrl) {
     await initializeDevServer(codespaceName, onLog);
