@@ -45,6 +45,8 @@ export interface Agent {
   codeBlocks: string[];
   screenshots: AgentScreenshots | null;
   previewUrl: string | null;
+  branchName: string | null;
+  branchUrl: string | null;
   error: string | null;
 }
 

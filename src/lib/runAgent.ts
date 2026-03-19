@@ -1,10 +1,11 @@
 import { Agent, AgentScreenshots, Project } from "./types";
 import { appendAgentLog, updateAgent } from "./store";
-import { runLlmAgent } from "./llm-provider";
+import { runLlmAgent, getLlmProvider } from "./llm-provider";
 import { getProjectContext } from "./projectContext";
 import { parseFilesFromResponse, writeFilesToProject } from "./fileWriter";
 import { takeScreenshot, takeAfterScreenshot, captureWithThemes } from "./screenshotRunner";
 import { deployToPreview } from "./codespaces-deployer";
+import { createBranchCommitAndPush } from "./git-branch-deployer";
 import { MastraAgentId } from "./mastraRunner";
 
 const OUTPUT_INSTRUCTIONS = `
@@ -127,6 +128,8 @@ export function createAgents(taskId: string, count: number = 1): Agent[] {
       codeBlocks: [],
       screenshots: null,
       previewUrl: null,
+      branchName: null,
+      branchUrl: null,
       error: null,
     });
   }
@@ -225,8 +228,45 @@ export async function executeAgent(
 
       let previewUrl: string | null = null;
 
-      if (project.useCodespaces && result.written.length > 0) {
-        // Deploy to GitHub Codespace and get preview URL
+      // Subscription mode with git repo: create branch, commit, push, then deploy codespace
+      const provider = await getLlmProvider();
+      const isSubscriptionWithGit = provider === "claude-subscription" && !!project.gitRepository && result.written.length > 0;
+
+      if (isSubscriptionWithGit) {
+        try {
+          appendAgentLog(taskId, agent.id, "Creating branch and pushing changes...");
+          const branchResult = await createBranchCommitAndPush(
+            project.dir,
+            project.gitRepository!,
+            taskId,
+            agent.name,
+            result.written,
+            (message) => appendAgentLog(taskId, agent.id, message)
+          );
+          updateAgent(taskId, agent.id, {
+            branchName: branchResult.branchName,
+            branchUrl: branchResult.branchUrl,
+          });
+          appendAgentLog(taskId, agent.id, `Branch ready: ${branchResult.branchName}`);
+          // Deploy to codespace from the new branch
+          try {
+            previewUrl = await deployToPreview(
+              project,
+              parsedFiles,
+              (message) => appendAgentLog(taskId, agent.id, message),
+              branchResult.branchName
+            );
+            appendAgentLog(taskId, agent.id, `Preview deployed: ${previewUrl}`);
+          } catch (deployError) {
+            const deployMsg = deployError instanceof Error ? deployError.message : String(deployError);
+            appendAgentLog(taskId, agent.id, `Codespaces deploy failed: ${deployMsg}`);
+          }
+        } catch (gitError) {
+          const gitMsg = gitError instanceof Error ? gitError.message : String(gitError);
+          appendAgentLog(taskId, agent.id, `Git branch/push failed: ${gitMsg}`);
+        }
+      } else if (project.useCodespaces && result.written.length > 0) {
+        // Non-subscription codespaces flow (e.g., open-router)
         try {
           previewUrl = await deployToPreview(
             project,
