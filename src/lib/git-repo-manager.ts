@@ -96,6 +96,29 @@ async function installDependencies(targetDir: string): Promise<void> {
   }
 }
 
+async function generatePrismaClient(targetDir: string): Promise<void> {
+  try {
+    await fs.access(path.join(targetDir, "prisma", "schema.prisma"));
+  } catch {
+    console.log("[GitRepoManager] No Prisma schema found, skipping generate");
+    return;
+  }
+  console.log("[GitRepoManager] Generating Prisma client...");
+  try {
+    await exec("npx", ["prisma", "generate"], {
+      cwd: targetDir,
+      timeout: 120_000,
+    });
+    console.log("[GitRepoManager] Prisma client generated successfully");
+  } catch (error) {
+    console.error("[GitRepoManager] Failed to generate Prisma client", {
+      targetDir,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
 async function buildProject(targetDir: string): Promise<void> {
   const pm = await detectPackageManager(targetDir);
   console.log(`[GitRepoManager] Building project with ${pm}...`);
@@ -204,6 +227,7 @@ export async function prepareProjectRepo(gitRepository: string): Promise<Prepare
   try {
     await cloneRepo(gitRepository, repoDir);
     await installDependencies(repoDir);
+    await generatePrismaClient(repoDir);
     await buildProject(repoDir);
     const port = await findFreePort();
     const devProcess = await startDevServer(repoDir, port);

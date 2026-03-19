@@ -1,14 +1,4 @@
 import { RunnerCallbacks } from "./playwrightRunner";
-import { frontendDeveloperAgent } from "@/mastra/agents/frontend-developer-agent";
-import { backendDeveloperAgent } from "@/mastra/agents/backend-developer-agent";
-import { productManagerAgent } from "@/mastra/agents/product-manager-agent";
-import { projectManagerAgent } from "@/mastra/agents/project-manager-agent";
-import { techLeadAgent } from "@/mastra/agents/tech-lead-agent";
-import { productDesignerAgent } from "@/mastra/agents/product-designer-agent";
-import { qaEngineerAgent } from "@/mastra/agents/qa-engineer-agent";
-import { securityAnalystAgent } from "@/mastra/agents/security-analyst-agent";
-import { technicalWriterAgent } from "@/mastra/agents/technical-writer-agent";
-import { simpleRequestResolverAgent } from "@/mastra/agents/simple-request-resolver-agent";
 
 type MastraAgentId =
   | "frontend-developer"
@@ -22,18 +12,17 @@ type MastraAgentId =
   | "technical-writer"
   | "simple-request-resolver";
 
-const agentRegistry: Record<MastraAgentId, { generate: (messages: string) => Promise<{ text: string }> }> = {
-  "frontend-developer": frontendDeveloperAgent,
-  "backend-developer": backendDeveloperAgent,
-  "product-manager": productManagerAgent,
-  "project-manager": projectManagerAgent,
-  "tech-lead": techLeadAgent,
-  "product-designer": productDesignerAgent,
-  "qa-engineer": qaEngineerAgent,
-  "security-analyst": securityAnalystAgent,
-  "technical-writer": technicalWriterAgent,
-  "simple-request-resolver": simpleRequestResolverAgent,
-};
+function getMastraConfig() {
+  const baseUrl = process.env.MASTRA_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("MASTRA_BASE_URL is not configured in environment variables");
+  }
+  const apiKey = process.env.MASTRA_API_KEY;
+  if (!apiKey) {
+    throw new Error("MASTRA_API_KEY is not configured in environment variables");
+  }
+  return { baseUrl, apiKey };
+}
 
 function extractCodeBlocks(text: string): string[] {
   const regex = /```[\w]*\n([\s\S]*?)```/g;
@@ -50,14 +39,26 @@ export async function runMastraAgent(
   callbacks: RunnerCallbacks,
   agentId: MastraAgentId = "frontend-developer"
 ): Promise<{ response: string; codeBlocks: string[] }> {
-  const agent = agentRegistry[agentId];
-  if (!agent) {
-    throw new Error(`Unknown Mastra agent: ${agentId}`);
-  }
-  callbacks.onLog(`Sending prompt to Mastra agent "${agentId}"...`);
+  const { baseUrl, apiKey } = getMastraConfig();
+  const url = `${baseUrl}/agents/${agentId}/generate`;
+  callbacks.onLog(`Sending prompt to Mastra agent "${agentId}" at ${baseUrl}...`);
   try {
-    const result = await agent.generate(prompt);
-    const responseText = result.text;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Mastra API error (${response.status}): ${errorBody}`);
+    }
+    const data = await response.json();
+    const responseText = data.text ?? "";
     if (!responseText) {
       throw new Error(`Mastra agent "${agentId}" returned an empty response`);
     }
